@@ -5,6 +5,10 @@
 
 #include "esphome/core/log.h"
 
+#include <algorithm>
+#include <cstring>
+#include <strings.h>
+
 namespace esphome {
 namespace wled_fx {
 
@@ -81,6 +85,17 @@ void WledFxSelect::setup() {
     for (size_t i = 0; i < total; i++)
       options.push_back(PALETTE_NAMES[i]);
   }
+  /* Alphabetical, because 167 effects in registry order (which follows the
+   * WLED batches) is a dropdown nobody can find anything in. Selection is
+   * resolved by name -- set_effect_by_name / set_palette_by_name -- so the
+   * order is display-only and cannot change what a choice means.
+   * strcasecmp first so 'Blink' sorts before 'BPM' the way a person reads it,
+   * then strcmp to keep 'Sparkle' and 'Sparkle+' in a stable order: they
+   * differ only by punctuation, which strcasecmp calls equal. */
+  std::sort(options.begin(), options.end(), [](const char *a, const char *b) {
+    const int folded = strcasecmp(a, b);
+    return folded != 0 ? folded < 0 : strcmp(a, b) < 0;
+  });
   this->traits.set_options(options);
 
   this->publish_current_();
